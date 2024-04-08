@@ -1,0 +1,11 @@
+version: 0.1
+workflows:
+   - name: "PRINT"
+     subclass: WDL
+     primaryDescriptorPath: /PRINT.wdl
+     filters:  # Only develop or master branches and localAligner/** tags
+         branches:
+             - main
+         tags:
+             - /.*/
+
