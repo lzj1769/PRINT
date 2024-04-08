@@ -321,7 +321,8 @@ setMethod("getTFBS",
                    nCores = 16) {
             
             # Directory for storing intermediate results
-            tmpDir <- dataDir(project)
+            # tmpDir <- dataDir(project)
+            tmpDir <- outDir(project)
             
             # Determine chunk size
             if(is.null(chunkSize)){
@@ -334,9 +335,12 @@ setMethod("getTFBS",
             }
             
             # Create a folder for saving intermediate results
-            chunkTmpDir <- paste(tmpDir, "chunkedTFBSResults/", sep = "")
+              
+            # chunkTmpDir <- paste(tmpDir, "chunkedTFBSResults/", sep = "")
+              chunkTmpDir <- file.path(tmpDir, "chunkedTFBSResults")
             if(!dir.exists(chunkTmpDir)){
-              system(paste("mkdir -p", chunkTmpDir))
+                dir.create(chunkTmpDir, recursive = TRUE)
+              # system(paste("mkdir -p", chunkTmpDir))
             }
             
             # Get region data we need to use later
@@ -377,18 +381,22 @@ setMethod("getTFBS",
               # Get ATAC insertion data for the current chunk
               chunkRegions <- starts[i]:ends[i]
               if(length(countTensor(project)) == 0){
-                chunkTensorDir <- paste0(tmpDir, "chunkedCountTensor/")
-                chunkCountTensor <- readRDS(paste(chunkTensorDir, "chunk_",i, ".rds", sep = ""))
+                # chunkTensorDir <- paste0(tmpDir, "chunkedCountTensor/")
+                # chunkCountTensor <- readRDS(paste(chunkTensorDir, "chunk_",i, ".rds", sep = ""))
+                  chunkCountTensor <- readRDS(file.path(tmpDir, "chunkedCountTensor", glue::glue("chunk_{i}.rds")))
               }else{
                 chunkCountTensor <- countTensor(project)[chunkRegions]
               }
               names(chunkCountTensor) <- chunkRegions
               
               # Skip current chunk if result already exists
-              if(file.exists(paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))){
+              # if(file.exists(paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))){
+              #   next
+              # }
+              
+              if(file.exists(file.path(chunkTmpDir, glue::glue("chunk_{i}.rds")))){
                 next
               }
-              
               print(Sys.time(), "\n")
               
               # The outer for loop iterates through each chunk. Within each iteration,
@@ -436,7 +444,9 @@ setMethod("getTFBS",
               
               # Save results
               saveRDS(chunkFootprintResults,
-                      paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
+                      file.path(chunkTmpDir, glue::glue("chunk_{i}.rds"))
+                      #paste(chunkTmpDir, "chunk_",i, ".rds", sep = "")
+                     )
             }
             
             project

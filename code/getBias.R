@@ -86,6 +86,7 @@ setMethod("getRegionBias",
 # Get precomputed Tn5 bias for each region
 setGeneric("getPrecomputedBias",
            function(project, # footprintingProject object
+                    Tn5BiasDir, # Directory of pre-computed Tn5 bias
                     nCores = 4, # Number of cores to use
                     chunkSize = 100, # Chunk size for parallel processing of regions
                     ...) standardGeneric("getPrecomputedBias"))
@@ -93,16 +94,18 @@ setGeneric("getPrecomputedBias",
 setMethod("getPrecomputedBias", 
           signature = c(project = "footprintingProject"),
           function(project,
+                   Tn5BiasDir,
                    nCores = 4,
                    chunkSize = 100) {
             
-            projectDataDir <- dataDir(project)
+            # projectDataDir <- dataDir(project)
             
             # Get reference genome
             referenceGenome <- refGenome(project)
             availableGenomes <- c("ce11","danRer11","dm6","hg19","hg38","mm10","panTro6","sacCer3")
             if(referenceGenome %in% availableGenomes){
-              h5_path <- paste0("../../data/shared/precomputedTn5Bias/", referenceGenome, "Tn5Bias.h5")
+              # h5_path <- paste0("../../data/shared/precomputedTn5Bias/", referenceGenome, "Tn5Bias.h5")
+                h5_path <- paste0(Tn5BiasDir, "/", referenceGenome, "Tn5Bias.h5")
             }else{
               stop("Specified reference genome is not available!")
             }

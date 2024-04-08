@@ -50,8 +50,8 @@ setGeneric("getCountTensor",
 setMethod("getCountTensor", 
           signature = c(project = "footprintingProject"),
           function(project, # footprintingProject object
-                   pathToFrags, # Path to fragments file
-                   barcodeGroups, # Data.frame specifying membership of barcodes in pseudobulks. First column is barcodes and second is groupID 
+                   # pathToFrags, # Path to fragments file
+                   # barcodeGroups, # Data.frame specifying membership of barcodes in pseudobulks. First column is barcodes and second is groupID 
                    maxFragLength = NULL, # Fragment length upper limit
                    nrows = Inf, # Number of rows to read in
                    chunkSize = NULL, # Chunk size for parallel processing of regions
@@ -59,14 +59,9 @@ setMethod("getCountTensor",
                    pairedEnd = T, # True/False. Whether data is paired-end or single-end
                    returnCombined = T # Whether to return the combined result for all chunks. Set it to False when data is too big
           ) {
-            
-            # Set project slots
-            fragFile(project) <- pathToFrags
-            barcodeGrouping(project) <- barcodeGroups
-            
-            # Retrieve genomic ranges of the regions to footprint
-            regions <- regionRanges(project)
-            
+              
+            regions = regionRanges(project)
+              
             # We chunk the regions into batches to reduce memory usage
             if(is.null(chunkSize)){
               chunkSize <- regionChunkSize(project)
@@ -74,11 +69,11 @@ setMethod("getCountTensor",
             print(paste0("Using chunk size = ", chunkSize))
             
             # Get countTensor
-            countTensor(project) <- computeCountTensor(pathToFrags = pathToFrags, 
+            countTensor(project) <- computeCountTensor(pathToFrags = fragFile(project), 
                                                        regions = regions, 
-                                                       barcodeGroups = barcodeGroups, 
+                                                       barcodeGroups = barcodeGrouping(project), 
                                                        maxFragLength = maxFragLength,
-                                                       tmpDir = dataDir(project),
+                                                       tmpDir = outDir(project),
                                                        nrows = nrows,
                                                        chunkSize = min(chunkSize, length(regions)),
                                                        nCores = nCores,
@@ -148,10 +143,10 @@ computeCountTensor <- function(pathToFrags, # Path to fragments file
   ends <- chunkIntervals[["ends"]]
   
   # Create a folder for saving intermediate results
-  chunkTmpDir <- paste0(tmpDir, "chunkedCountTensor/")
-  if(!dir.exists(chunkTmpDir)){
-    system(paste("mkdir -p", chunkTmpDir))
-  }
+    chunkTmpDir <- file.path(tmpDir, "chunkedCountTensor")  
+    if(!dir.exists(chunkTmpDir)){
+        dir.create(chunkTmpDir, recursive = TRUE)
+    }
   
   # For each chunk, we extract data for individual regions
   # For each region, we store the data in a 3-column data.frame (columns are group, position and counts)
@@ -162,6 +157,7 @@ computeCountTensor <- function(pathToFrags, # Path to fragments file
     print(paste0(Sys.time()," Processing chunk ", i, " out of ", length(starts), " chunks"))
     
     # Skip current chunk if result already exists
+      
     if(file.exists(paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))){
       next
     }
@@ -238,8 +234,10 @@ computeCountTensor <- function(pathToFrags, # Path to fragments file
     }
     
     # Save results
-    saveRDS(countTensorChunk,
-            paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
+      count_tensort_filename <- file.path(chunkTmpDir, glue::glue("chunk_{i}.rds"))
+      saveRDS(countTensorChunk, count_tensort_filename)
+    #saveRDS(countTensorChunk,
+    #        paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
     
     # Release unused memory
     if((i %% 10) == 0) gc()
@@ -253,7 +251,8 @@ computeCountTensor <- function(pathToFrags, # Path to fragments file
     countTensorAll <- pbapply::pblapply(
       1:length(starts),
       function(i){
-        readRDS(paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
+          readRDS(file.path(chunkTmpDir, glue::glue("chunk_{i}.rds")))
+        # readRDS(paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
       }
     )
     countTensorAll <- Reduce(c, countTensorAll)

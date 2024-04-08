@@ -47,7 +47,8 @@ setMethod("getFootprints",
                    nCores = 16) {
             
             # Directory for storing intermediate results
-            tmpDir <- dataDir(project)
+            # tmpDir <- dataDir(project)
+            tmpDir <- outDir(project)
             
             # Determine chunk size
             if(is.null(chunkSize)){
@@ -94,9 +95,12 @@ get_footprints <- function(projectCountTensor, # Region-by-position-by-pseudobul
 ){
   
   # Create a folder for saving intermediate results
-  chunkTmpDir <- paste(tmpDir, "chunkedFootprintResults/", mode, "/", sep = "")
+    chunkTmpDir <- file.path(tmpDir, "chunkedFootprintResults", mode)
+    
+  # chunkTmpDir <- paste(tmpDir, "chunkedFootprintResults/", mode, "/", sep = "")
   if(!dir.exists(chunkTmpDir)){
-    system(paste("mkdir -p", chunkTmpDir))
+      dir.create(chunkTmpDir, recursive = TRUE)
+    # system(paste("mkdir -p", chunkTmpDir))
   }
   
   # Get region data we need to use later
@@ -123,15 +127,16 @@ get_footprints <- function(projectCountTensor, # Region-by-position-by-pseudobul
     # Get ATAC insertion data for the current chunk
     chunkRegions <- starts[i]:ends[i]
     if(length(projectCountTensor) == 0){
-      chunkTensorDir <- paste0(tmpDir, "chunkedCountTensor/")
-      chunkCountTensor <- readRDS(paste(chunkTensorDir, "chunk_",i, ".rds", sep = ""))
+      # chunkTensorDir <- paste0(tmpDir, "/chunkedCountTensor/")
+      # chunkCountTensor <- readRDS(paste(chunkTensorDir, "chunk_",i, ".rds", sep = ""))
+        chunkCountTensor <- readRDS(file.path(tmpDir, "chunkedCountTensor", glue::glue("chunk_{i}.rds")))
     }else{
       chunkCountTensor <- projectCountTensor[chunkRegions]
     }
     names(chunkCountTensor) <- chunkRegions
     
     # Skip current chunk if result already exists
-    if(file.exists(paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))){
+    if(file.exists(file.path(chunkTmpDir, glue::glue("chunk_{i}.rds")))){
       next
     }
     
@@ -172,13 +177,14 @@ get_footprints <- function(projectCountTensor, # Region-by-position-by-pseudobul
     print("Finished!")
     
     # Save results
-    saveRDS(chunkFootprintResults,
-            paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
+    # saveRDS(chunkFootprintResults,
+    #         paste(chunkTmpDir, "chunk_",i, ".rds", sep = ""))
+    saveRDS(chunkFootprintResults, file.path(chunkTmpDir, glue::glue("chunk_{i}.rds")))
   }
   
   # Integrate results for all chunks
   chunkFiles <- gtools::mixedsort(list.files(chunkTmpDir))
-  chunkResults <- lapply(chunkFiles, function(f){readRDS(paste(chunkTmpDir, f, sep = ""))})
+  chunkResults <- lapply(chunkFiles, function(f){readRDS(file.path(chunkTmpDir, f))})
   names(chunkResults) <- sapply(chunkFiles, function(f){strsplit(f, "\\.")[[1]][1]})
   footprintResults <- Reduce(c, chunkResults)
   
@@ -530,8 +536,9 @@ getCountData <- function(project, # footprintingProject object
     chunkSize <- regionChunkSize(project)
     chunkIntervals <- getChunkInterval(regionRanges(project), chunkSize = chunkSize)
     chunkInd <- max(which(regionInd >= chunkIntervals$starts))
-    chunkPath <- paste0(dataDir(project), "chunkedCountTensor/chunk_", chunkInd, ".rds")
-    countData <- readRDS(chunkPath)
+    #chunkPath <- paste0(outDir(project), "/chunkedCountTensor/chunk_", chunkInd, ".rds")
+    chunkPath <- file.path(outDir(project), "chunkedCountTensor", glue::glue("chunk_{chunkInd}.rds"))
+      countData <- readRDS(chunkPath)
     regionInd <- regionInd - (chunkInd - 1) * chunkSize 
   }else{
     countData <- countTensor(project)

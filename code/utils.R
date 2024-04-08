@@ -8,9 +8,8 @@ setClassUnion("groupsClass", c("integer", "character"))
 setClass("footprintingProject", 
          slots = c(
            projectName = "character", # Name of the project
-           dataDir = "character", # Where we store input and output data
-           mainDir = "character", # The main folder containing the code/analyses/data subfolders
-           fragFile = "character", # Path to the ATAC fragments file
+           outDir = "character", # Path for output data
+             fragFile = "character", # Path to the ATAC fragments file
            refGenome = "character", # Reference genome. Example "hg38", "mm10"
            countTensor = "list", # Sample-by-region-by-position 3D Tensor of ATAC insertions
            regionRanges = "GRanges", # Regions within which we wish to perform footprinting
@@ -33,14 +32,14 @@ setClass("footprintingProject",
 # Constructor fucntion for our main class
 footprintingProject <- function(refGenome, # Reference genome. Example "hg38", "mm10"
                                 projectName, # Character. Name of the project
-                                mainDir = "../",
-                                dataDir = "../") {
+                                outDir,
+                               fragFile) {
   
   new("footprintingProject", 
       projectName = projectName,
       refGenome = refGenome,
-      mainDir = mainDir,
-      dataDir = paste0(dataDir, projectName, "/"),
+      outDir = outDir,
+      fragFile = fragFile,
       regionChunkSize = 2000L)
   
 }
@@ -124,14 +123,17 @@ setMethod("fragFile<-", "footprintingProject", function(x, value) {
   x
 })
 
+# Method to get the output directory for storing data from the footprintingProject object
+setGeneric("outDir", function(x) standardGeneric("outDir"))
+setMethod("outDir", "footprintingProject", function(x) x@outDir)
+
+          
 # Method to get the directory for storing data from the footprintingProject object
 setGeneric("dataDir", function(x) standardGeneric("dataDir"))
-
 setMethod("dataDir", "footprintingProject", function(x) x@dataDir)
 
 # Method to set the directory for storing data for the footprintingProject object
 setGeneric("dataDir<-", function(x, value) standardGeneric("dataDir<-"))
-
 setMethod("dataDir<-", "footprintingProject", function(x, value) {
   x@dataDir <- value
   if(!dir.exists(value)) system(paste("mkdir", value))
